@@ -29,14 +29,13 @@ fn main() {
     timer(parse_inp(inp.split_whitespace().collect()));
 }
 
-const INP_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\d+)(s|m|h)$").unwrap());
-
 fn parse_inp(inp_arr: Vec<&str>) -> u32 {
+    let re: Regex = Regex::new(r"^(\d+)(s|m|h)$").unwrap();
     let mut sec: u32 = 0;
 
     for e in &inp_arr {
-        if INP_RE.is_match(e) {
-            let caps: regex::Captures<'_> = INP_RE.captures(e).unwrap();
+        if re.is_match(e) {
+            let caps: regex::Captures<'_> = re.captures(e).unwrap();
             let num: u32 = caps[1].parse().unwrap();
 
             match &caps[2] {
