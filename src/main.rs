@@ -1,30 +1,28 @@
 use {
     notify_rust::Notification,
-    once_cell::sync::Lazy,
     regex::Regex,
-    // crossterm::terminal,
     rodio::{source::Source, Decoder, OutputStream, Sink},
 
     std::{
-        io::{self, /*BufReader,*/ Cursor, Write},
-        // fs::File,
+        io::{self, Cursor, Stdout, Write},
         thread,
         time::{Duration, Instant},
     },
 };
 
 fn main() {
+    let mut stdout: Stdout = io::stdout();
     let mut inp: String = String::new();
 
     print!("\rWait for: ");
-    io::stdout().flush().unwrap();
+    stdout.flush().unwrap();
 
     io::stdin()
         .read_line(&mut inp)
         .expect("Failed to read input.");
 
     print!("\x1B[1A\x1B[2K");
-    io::stdout().flush().unwrap();
+    stdout.flush().unwrap();
 
     timer(parse_inp(inp.split_whitespace().collect()));
 }
@@ -39,10 +37,10 @@ fn parse_inp(inp_arr: Vec<&str>) -> u32 {
             let num: u32 = caps[1].parse().unwrap();
 
             match &caps[2] {
-                // "s" => sec += num,
+                "s" => sec += num,
                 "m" => sec += num * 60,
                 "h" => sec += num * 3600,
-                _ => sec += num,
+                _ => (),
             }
         }
     }
@@ -65,6 +63,7 @@ fn format_time(s: u32) -> String {
 }
 
 fn timer(sec: u32) {
+    let mut stdout: Stdout = io::stdout();
     let start: Instant = Instant::now();
 
     for i in 0..sec {
@@ -75,17 +74,9 @@ fn timer(sec: u32) {
         }
 
         let time_str: String = format_time(sec - elapsed);
-        // TODO
-        // let term_w = terminal::size().unwrap().1 as usize;
 
-        // print!(
-        //     "\rWaiting for {time_str} {}",
-        //     "=".repeat(
-        //         (term_w - 15 - time_str.len()) as usize
-        //     )
-        // );
-        print!("\rWaiting for {time_str}");
-        io::stdout().flush().unwrap();
+        print!("\rWaiting for {time_str} ");
+        stdout.flush().unwrap();
 
         let next_tick: Duration = Duration::from_secs((i + 1) as u64);
         let now: Duration = start.elapsed();
@@ -95,7 +86,7 @@ fn timer(sec: u32) {
         }
     }
 
-    let end_str: String = format!("Finished waiting for {sec}s ^^");
+    let end_str: String = format!("Finished waiting for {}s ^^", format_time(sec));
 
     println!("\r{end_str}\nPress Ctrl+C to quit...");
 
@@ -109,11 +100,11 @@ fn timer(sec: u32) {
     let (_stream, stream_handle): (OutputStream, rodio::OutputStreamHandle) =
         OutputStream::try_default().unwrap();
 
-    let source: Decoder<Cursor<&[u8]>> =
-        Decoder::new(Cursor::new(include_bytes!("./beep.ogg").as_ref())).unwrap();
+    let source: rodio::source::Repeat<Decoder<Cursor<&_>>> =
+        Decoder::new(Cursor::new(include_bytes!("./beep.ogg").as_ref())).unwrap().repeat_infinite();
 
     let sink: Sink = rodio::Sink::try_new(&stream_handle).unwrap();
 
-    sink.append(source.repeat_infinite());
+    sink.append(source);
     sink.sleep_until_end();
 }
